@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>時間裁縫師・克羅諾 | 3D 傳奇全息鐳射卡牌展示</title>
+  <meta name="description"
+    content="個人專屬 3D 鐳射反光卡牌展示網頁 - 時間裁縫師・克羅諾 (CHRONO, The Temporal Weaver)。具備 3D 視差、全息折射、卡面即時編輯與高解析度卡牌匯出。">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+    rel="stylesheet">
+
+  <!-- html2canvas for HD export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       1. CSS Tokens & Reset
+       ========================================================================== */
+    :root {
+      --bg-dark: #070311;
+      --bg-gradient: radial-gradient(circle at 50% 20%, #1c0b38 0%, #0a0418 60%, #04010a 100%);
+      --accent-purple: #a855f7;
+      --accent-violet-glow: rgba(168, 85, 247, 0.45);
+      --accent-gold: #fbbf24;
+      --accent-gold-glow: rgba(251, 191, 36, 0.4);
+      --accent-cyan: #22d3ee;
+      --panel-bg: rgba(18, 10, 36, 0.72);
+      --panel-border: rgba(168, 85, 247, 0.28);
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+
+      /* Card Dimension & Ratio */
+      --card-ratio: 63 / 88;
+      --card-width: min(88vw, 375px);
+
+      /* Interactive Transform Variables */
+      --pointer-x: 50%;
+      --pointer-y: 50%;
+      --rotate-x: 0deg;
+      --rotate-y: 0deg;
+      --foil-opacity: 0.85;
+      --glare-opacity: 0.65;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-dark);
+      background-image: var(--bg-gradient);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-main);
+      overflow-x: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient animated cosmic particles */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(2px 2px at 20px 30px, #a855f7, rgba(0, 0, 0, 0)),
+        radial-gradient(2px 2px at 140px 70px, #fbbf24, rgba(0, 0, 0, 0)),
+        radial-gradient(1px 1px at 290px 180px, #22d3ee, rgba(0, 0, 0, 0)),
+        radial-gradient(2px 2px at 420px 290px, #c084fc, rgba(0, 0, 0, 0)),
+        radial-gradient(1.5px 1.5px at 600px 120px, #f59e0b, rgba(0, 0, 0, 0));
+      background-size: 650px 650px;
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+      animation: stardustFloat 90s linear infinite;
+    }
+
+    @keyframes stardustFloat {
+      from {
+        transform: translateY(0);
+      }
+
+      to {
+        transform: translateY(-650px);
+      }
+    }
+
+    /* ==========================================================================
+       2. Layout Architecture (RWD)
+       ========================================================================== */
+    header.app-header {
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+      background: rgba(7, 3, 17, 0.6);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #a855f7, #fbbf24);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 0 16px var(--accent-violet-glow);
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      background: linear-gradient(90deg, #fff, #c084fc, #fde047);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #e9d5ff;
+    }
+
+    main.showcase-container {
+      flex: 1;
+      width: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      gap: 3rem;
+      align-items: center;
+      z-index: 1;
+    }
+
+    /* Tablet breakpoint (768px - 1023px) */
+    @media (max-width: 1023px) {
+      main.showcase-container {
+        grid-template-columns: 1fr 380px;
+        gap: 2rem;
+        padding: 1.5rem 1rem;
+      }
+
+      :root {
+        --card-width: min(84vw, 350px);
+      }
+    }
+
+    /* Mobile breakpoint (< 768px) */
+    @media (max-width: 767px) {
+      main.showcase-container {
+        grid-template-columns: 1fr;
+        padding: 1.25rem 0.75rem 3rem 0.75rem;
+        gap: 2.25rem;
+      }
+
+      .app-header {
+        padding: 1rem;
+      }
+
+      :root {
+        --card-width: min(88vw, 340px);
+      }
+    }
+
+    /* ==========================================================================
+       3. 3D Card Stage
+       ========================================================================== */
+    .card-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      perspective: 1200px;
+      min-height: 580px;
+    }
+
+    .card-halo {
+      position: absolute;
+      width: min(90vw, 420px);
+      height: min(90vw, 420px);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(251, 191, 36, 0.08) 45%, transparent 70%);
+      filter: blur(40px);
+      pointer-events: none;
+      z-index: 0;
+      animation: pulseHalo 6s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseHalo {
+      0% {
+        transform: scale(0.9);
+        opacity: 0.6;
+      }
+
+      100% {
+        transform: scale(1.15);
+        opacity: 0.95;
+      }
+    }
+
+    .card-wrapper {
+      position: relative;
+      width: var(--card-width);
+      aspect-ratio: var(--card-ratio);
+      z-index: 2;
+      transform-style: preserve-3d;
+      transition: transform 0.12s cubic-bezier(0.2, 0, 0.2, 1);
+      cursor: grab;
+      user-select: none;
+    }
+
+    .card-wrapper:active {
+      cursor: grabbing;
+    }
+
+    .card-wrapper.smooth-return {
+      transition: transform 0.65s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .card-wrapper.flipped {
+      transform: rotateY(180deg) !important;
+    }
+
+    .card-wrapper.auto-idle {
+      animation: idleBreathe 7s ease-in-out infinite;
+    }
+
+    @keyframes idleBreathe {
+      0% {
+        transform: rotateX(4deg) rotateY(-5deg);
+      }
+
+      50% {
+        transform: rotateX(-5deg) rotateY(6deg);
+      }
+
+      100% {
+        transform: rotateX(4deg) rotateY(-5deg);
+      }
+    }
+
+    /* Single Card Inner (Holds front and back) */
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      border-radius: 18px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8),
+        0 0 30px rgba(168, 85, 247, 0.25);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      overflow: hidden;
+    }
+
+    /* ==========================================================================
+       4. Card Front Face Styling (TCG Master Architecture)
+       ========================================================================== */
+    .card-front {
+      background: #0f0821;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid rgba(251, 191, 36, 0.85);
+      box-shadow: inset 0 0 0 1px rgba(168, 85, 247, 0.6),
+        inset 0 0 20px rgba(12, 4, 30, 0.85);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Metallic Golden/Runic Card Border */
+    .card-front::before {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: 15px;
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    /* Front Header */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px 6px 6px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card-stage-badge {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(8px, 2.2vw, 9.5px);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      color: #240a02;
+      padding: 1px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-title-wrap {
+      flex: 1;
+      margin-left: 6px;
+      overflow: hidden;
+    }
+
+    .card-name {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(13px, 3.6vw, 15px);
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 10px rgba(168, 85, 247, 0.6);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      outline: none;
+      transition: background 0.2s;
+    }
+
+    .card-name:focus {
+      background: rgba(168, 85, 247, 0.25);
+      border-radius: 4px;
+    }
+
+    .card-hp-type {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .card-hp-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(9px, 2.4vw, 10px);
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .card-hp-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(14px, 3.8vw, 17px);
+      font-weight: 800;
+      color: #fde047;
+      letter-spacing: -0.02em;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+      outline: none;
+    }
+
+    .type-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #c084fc, #7e22ce);
+      border: 1px solid #fbbf24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      box-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+    }
+
+    /* Artwork Container */
+    .card-art-box {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      border: 2px solid rgba(251, 191, 36, 0.7);
+      box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.8),
+        0 4px 10px rgba(0, 0, 0, 0.5);
+      background: #090317;
+      margin-bottom: 6px;
+      z-index: 2;
+    }
+
+    .card-art-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      transition: transform 0.3s ease;
+      display: block;
+    }
+
+    .art-frame-corner {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #fbbf24;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .art-frame-corner.top-left {
+      top: 3px;
+      left: 3px;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    .art-frame-corner.top-right {
+      top: 3px;
+      right: 3px;
+      border-left: none;
+      border-bottom: none;
+    }
+
+    .art-frame-corner.bottom-left {
+      bottom: 3px;
+      left: 3px;
+      border-right: none;
+      border-top: none;
+    }
+
+    .art-frame-corner.bottom-right {
+      bottom: 3px;
+      right: 3px;
+      border-left: none;
+      border-top: none;
+    }
+
+    /* Abilities & Attacks Body */
+    .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      position: relative;
+      z-index: 2;
+      justify-content: space-around;
+    }
+
+    /* Ability Box */
+    .ability-block {
+      background: linear-gradient(90deg, rgba(168, 85, 247, 0.22) 0%, rgba(36, 0, 70, 0.4) 100%);
+      border-left: 3px solid #c084fc;
+      border-radius: 4px;
+      padding: 4px 6px;
+    }
+
+    .ability-title-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+
+    .ability-tag {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(8px, 2.2vw, 9px);
+      font-weight: 700;
+      color: #f3e8ff;
+      background: #9333ea;
+      padding: 1px 4px;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+
+    .ability-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(10.5px, 2.8vw, 12px);
+      font-weight: 700;
+      color: #fde047;
+      outline: none;
+    }
+
+    .ability-desc {
+      font-size: clamp(8.5px, 2.3vw, 9.5px);
+      color: #e2e8f0;
+      line-height: 1.28;
+      outline: none;
+    }
+
+    /* Attack 1 */
+    .attack-block {
+      background: rgba(18, 8, 38, 0.55);
+      border-radius: 5px;
+      padding: 5px 6px;
+      border: 1px solid rgba(168, 85, 247, 0.2);
+    }
+
+    .attack-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .attack-cost-name {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .energy-dots {
+      display: flex;
+      gap: 2px;
+    }
+
+    .energy-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #d8b4fe, #7e22ce);
+      border: 1px solid rgba(251, 191, 36, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+    }
+
+    .energy-dot.special {
+      background: radial-gradient(circle at 35% 35%, #fde047, #d97706);
+    }
+
+    .attack-name {
+      font-size: clamp(11px, 2.9vw, 12.5px);
+      font-weight: 700;
+      color: #fff;
+      outline: none;
+    }
+
+    .attack-damage {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(13px, 3.4vw, 16px);
+      font-weight: 800;
+      color: #fde047;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      outline: none;
+    }
+
+    .attack-desc {
+      font-size: clamp(8.5px, 2.2vw, 9.5px);
+      color: #cbd5e1;
+      line-height: 1.25;
+      outline: none;
+    }
+
+    /* Ultimate Attack Banner */
+    .ultimate-attack-block {
+      background: linear-gradient(135deg, rgba(88, 28, 135, 0.5) 0%, rgba(217, 119, 6, 0.25) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.45);
+      border-radius: 6px;
+      padding: 5px 6px;
+      box-shadow: inset 0 0 10px rgba(168, 85, 247, 0.2);
+    }
+
+    .ultimate-badge {
+      font-size: 8px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+      padding: 1px 4px;
+      border-radius: 2px;
+      margin-right: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer Metadata & Stats */
+    .card-footer {
+      border-top: 1px solid rgba(168, 85, 247, 0.25);
+      padding-top: 4px;
+      margin-top: 2px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .battle-stats-row {
+      display: flex;
+      justify-content: space-around;
+      font-size: clamp(7.5px, 2vw, 8.5px);
+      color: #94a3b8;
+      margin-bottom: 3px;
+    }
+
+    .battle-stat-item strong {
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .meta-seal-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: clamp(7px, 1.8vw, 8px);
+      color: #64748b;
+      padding: 0 2px;
+    }
+
+    .meta-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .meta-collector {
+      color: #cbd5e1;
+      font-family: 'Space Grotesk', monospace;
+    }
+
+    .meta-copyright {
+      color: #64748b;
+    }
+
+    /* Official Shifting Hologram Stamp */
+    .holo-security-seal {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at var(--pointer-x) var(--pointer-y), #fff 0%, #fbbf24 30%, #a855f7 65%, #06b6d4 100%);
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.7);
+      border: 1px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: #1a0033;
+      font-weight: 900;
+    }
+
+    /* ==========================================================================
+       5. Foil & Holographic Optical Layers
+       ========================================================================== */
+    /* Base Foil Overlay */
+    .card-foil-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+      opacity: var(--foil-opacity);
+    }
+
+    /* Specular Glare Layer */
+    .card-glare-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      pointer-events: none;
+      z-index: 12;
+      background: radial-gradient(circle 320px at var(--pointer-x) var(--pointer-y),
+          rgba(255, 255, 255, 0.7) 0%,
+          rgba(255, 255, 255, 0.15) 35%,
+          transparent 75%);
+      mix-blend-mode: overlay;
+      opacity: var(--glare-opacity);
+      transition: opacity 0.3s ease;
+    }
+
+    /* Micro-stardust glitter layer */
+    .card-glitter-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 18px;
+      pointer-events: none;
+      z-index: 11;
+      background-image: radial-gradient(1px 1px at 15% 15%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(1.5px 1.5px at 70% 30%, rgba(251, 191, 36, 0.9), transparent),
+        radial-gradient(1.2px 1.2px at 35% 80%, rgba(168, 85, 247, 0.9), transparent),
+        radial-gradient(1.5px 1.5px at 85% 75%, rgba(34, 211, 238, 0.9), transparent),
+        radial-gradient(1px 1px at 50% 50%, rgba(255, 255, 255, 0.8), transparent);
+      background-size: 80px 80px;
+      mix-blend-mode: color-dodge;
+      opacity: 0.6;
+    }
+
+    /* --------------------------------------------------
+       FOIL THEMES (Switchable)
+       -------------------------------------------------- */
+    /* 1. Rainbow Secret 極光全息 (Default) */
+    .foil-rainbow-secret {
+      background:
+        linear-gradient(calc(var(--rotate-y) * 2 + 115deg),
+          rgba(255, 0, 128, 0.35) 0%,
+          rgba(255, 154, 0, 0.4) 18%,
+          rgba(240, 230, 0, 0.45) 34%,
+          rgba(0, 255, 136, 0.4) 50%,
+          rgba(0, 200, 255, 0.45) 66%,
+          rgba(138, 43, 226, 0.4) 82%,
+          rgba(255, 0, 128, 0.35) 100%),
+        repeating-linear-gradient(calc(var(--rotate-x) * 3 + 45deg),
+          rgba(255, 255, 255, 0.05) 0px,
+          rgba(255, 255, 255, 0.05) 2px,
+          transparent 2px,
+          transparent 8px);
+      background-position: var(--pointer-x) var(--pointer-y);
+      mix-blend-mode: color-dodge;
+    }
+
+    /* 2. Cosmos Holo 宇宙彩虹 */
+    .foil-cosmos-holo {
+      background:
+        radial-gradient(circle at var(--pointer-x) var(--pointer-y),
+          rgba(255, 255, 255, 0.6) 0%,
+          rgba(192, 132, 252, 0.5) 25%,
+          rgba(56, 189, 248, 0.4) 50%,
+          rgba(251, 191, 36, 0.35) 75%,
+          transparent 100%),
+        radial-gradient(ellipse at calc(100% - var(--pointer-x)) calc(100% - var(--pointer-y)), rgba(236, 72, 153, 0.4) 0%, transparent 60%);
+      mix-blend-mode: screen;
+    }
+
+    /* 3. Gold Ultra 黑金浮雕 */
+    .foil-gold-ultra {
+      background:
+        linear-gradient(calc(var(--rotate-y) * 3 + 135deg),
+          rgba(251, 191, 36, 0.65) 0%,
+          rgba(217, 119, 6, 0.5) 25%,
+          rgba(254, 240, 138, 0.8) 50%,
+          rgba(180, 83, 9, 0.6) 75%,
+          rgba(251, 191, 36, 0.65) 100%);
+      mix-blend-mode: hard-light;
+    }
+
+    /* 4. Silver Phantom 冷冽銀鏡 */
+    .foil-silver-phantom {
+      background:
+        linear-gradient(calc(var(--rotate-x) * 4 + 60deg),
+          rgba(255, 255, 255, 0.7) 0%,
+          rgba(148, 163, 184, 0.4) 30%,
+          rgba(226, 232, 240, 0.8) 50%,
+          rgba(100, 116, 139, 0.3) 70%,
+          rgba(255, 255, 255, 0.7) 100%),
+        radial-gradient(circle at var(--pointer-x) var(--pointer-y), rgba(34, 211, 238, 0.45) 0%, transparent 70%);
+      mix-blend-mode: color-dodge;
+    }
+
+    /* ==========================================================================
+       6. Card Back Face Styling (Luxury TCG Seal)
+       ========================================================================== */
+    .card-back {
+      transform: rotateY(180deg);
+      background: radial-gradient(circle at 50% 50%, #1e0938 0%, #0c0218 70%, #05000a 100%);
+      border: 3px solid #fbbf24;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+      position: relative;
+    }
+
+    .back-ring-outer {
+      position: absolute;
+      width: 82%;
+      aspect-ratio: 1;
+      border: 2px dashed rgba(251, 191, 36, 0.6);
+      border-radius: 50%;
+      animation: rotateClockwise 60s linear infinite;
+    }
+
+    .back-ring-middle {
+      position: absolute;
+      width: 66%;
+      aspect-ratio: 1;
+      border: 1.5px solid rgba(168, 85, 247, 0.5);
+      border-radius: 50%;
+      animation: rotateCounterClockwise 40s linear infinite;
+    }
+
+    @keyframes rotateClockwise {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes rotateCounterClockwise {
+      from {
+        transform: rotate(360deg);
+      }
+
+      to {
+        transform: rotate(0deg);
+      }
+    }
+
+    .back-seal-center {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 1.5rem;
+    }
+
+    .back-emblem {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.8));
+    }
+
+    .back-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      background: linear-gradient(135deg, #fff, #fbbf24, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    .back-sub {
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #a855f7;
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       7. Frosted Glass Control Panel (Right Column)
+       ========================================================================== */
+    .control-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 1.75rem;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(168, 85, 247, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      z-index: 10;
+    }
+
+    .panel-header {
+      border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+      padding-bottom: 1rem;
+    }
+
+    .panel-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      line-height: 1.4;
+    }
+
+    /* Section Groups */
+    .panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .section-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Style Switcher Grid */
+    .foil-style-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.6rem;
+    }
+
+    .foil-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 10px;
+      padding: 0.65rem 0.6rem;
+      color: #e2e8f0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s ease;
+      text-align: left;
+    }
+
+    .foil-btn:hover {
+      background: rgba(168, 85, 247, 0.2);
+      border-color: rgba(168, 85, 247, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .foil-btn.active {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(251, 191, 36, 0.25));
+      border-color: #fbbf24;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.3);
+      color: #fff;
+    }
+
+    .foil-color-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Quick Action Buttons */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.65rem;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 0.65rem;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: all 0.25s ease;
+    }
+
+    .btn-action:hover {
+      background: rgba(168, 85, 247, 0.25);
+      border-color: #a855f7;
+      transform: translateY(-2px);
+    }
+
+    .btn-primary-export {
+      background: linear-gradient(135deg, #9333ea 0%, #d97706 100%);
+      border: none;
+      border-radius: 12px;
+      padding: 0.95rem;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary-export:hover {
+      box-shadow: 0 6px 25px rgba(251, 191, 36, 0.5);
+      transform: translateY(-2px);
+    }
+
+    /* Image Upload Box */
+    .upload-zone {
+      border: 2px dashed rgba(168, 85, 247, 0.35);
+      border-radius: 12px;
+      padding: 0.85rem;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.2);
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .upload-zone:hover {
+      border-color: #fbbf24;
+      background: rgba(168, 85, 247, 0.1);
+    }
+
+    .upload-zone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-prompt {
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    /* Slider / Sliders */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .slider-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.15);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fbbf24;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+    }
+
+    /* Tips & Edit Badge */
+    .edit-hint-badge {
+      background: rgba(34, 211, 238, 0.1);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.78rem;
+      color: #a5f3fc;
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    /* Toast Notification */
+    .toast-msg {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(15, 8, 30, 0.95);
+      border: 1px solid #fbbf24;
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8), 0 0 20px rgba(251, 191, 36, 0.4);
+      z-index: 1000;
+      transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.4s ease;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .toast-msg.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="brand-wrap">
+      <div class="brand-logo-icon">⏳</div>
+      <div class="brand-title">LEGENDARY TCG FORGE</div>
+    </div>
+    <div class="header-badge">3D Holographic Parallax</div>
+  </header>
+
+  <!-- Main Showcase Container -->
+  <main class="showcase-container">
+
+    <!-- 3D Card Stage (Left Column) -->
+    <section class="card-stage" id="cardStage">
+      <!-- Ambient Background Glow -->
+      <div class="card-halo"></div>
+
+      <!-- 3D Interactive Card Wrapper -->
+      <div class="card-wrapper auto-idle" id="cardWrapper">
+        <div class="card-inner" id="cardInner">
+
+          <!-- FRONT FACE -->
+          <div class="card-face card-front" id="cardExportTarget">
+
+            <!-- Dynamic Holographic & Glare Overlays -->
+            <div class="card-foil-layer foil-rainbow-secret" id="foilLayer"></div>
+            <div class="card-glitter-layer"></div>
+            <div class="card-glare-layer" id="glareLayer"></div>
+
+            <!-- Card Header: Rank, Name, HP, Type -->
+            <div class="card-header">
+              <div class="card-stage-badge" contenteditable="true" spellcheck="false" title="點擊編輯階級">MYTHIC TRANSCENDENT
+              </div>
+              <div class="card-title-wrap">
+                <div class="card-name" id="cardNameText" contenteditable="true" spellcheck="false" title="點擊編輯名稱">
+                  時間裁縫師・克羅諾</div>
+              </div>
+              <div class="card-hp-type">
+                <span class="card-hp-label">HP</span>
+                <span class="card-hp-value" id="cardHpText" contenteditable="true" spellcheck="false"
+                  title="點擊編輯 HP">310</span>
+                <div class="type-icon" title="時空屬性">⏳</div>
+              </div>
+            </div>
+
+            <!-- Artwork Box -->
+            <div class="card-art-box">
+              <img src="chrono_card_art.jpg" alt="Chrono The Temporal Weaver" class="card-art-img" id="cardArtImage"
+                onerror="this.src='https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80'">
+              <div class="art-frame-corner top-left"></div>
+              <div class="art-frame-corner top-right"></div>
+              <div class="art-frame-corner bottom-left"></div>
+              <div class="art-frame-corner bottom-right"></div>
+            </div>
+
+            <!-- Card Body: Passives & Attacks -->
+            <div class="card-body">
+
+              <!-- Passive Ability -->
+              <div class="ability-block">
+                <div class="ability-title-row">
+                  <span class="ability-tag">特性</span>
+                  <span class="ability-name" contenteditable="true" spellcheck="false" title="點擊編輯特性名稱">時間回溯</span>
+                </div>
+                <div class="ability-desc" contenteditable="true" spellcheck="false" title="點擊編輯特性說明">
+                  對手造成的致命打擊將被因果律逆轉，本回合免除傷害。
+                </div>
+              </div>
+
+              <!-- Attack 1 -->
+              <div class="attack-block">
+                <div class="attack-header">
+                  <div class="attack-cost-name">
+                    <div class="energy-dots">
+                      <div class="energy-dot">⏳</div>
+                      <div class="energy-dot">⏳</div>
+                    </div>
+                    <span class="attack-name" contenteditable="true" spellcheck="false" title="點擊編輯招式名稱">命運抽絲</span>
+                  </div>
+                  <div class="attack-damage" contenteditable="true" spellcheck="false" title="點擊編輯傷害">100</div>
+                </div>
+                <div class="attack-desc" contenteditable="true" spellcheck="false" title="點擊編輯招式說明">
+                  奪取對手 1 顆能量標記轉化為自身時空護盾。
+                </div>
+              </div>
+
+              <!-- Ultimate Skill -->
+              <div class="ultimate-attack-block">
+                <div class="attack-header">
+                  <div class="attack-cost-name">
+                    <div class="energy-dots">
+                      <div class="energy-dot">⏳</div>
+                      <div class="energy-dot">⏳</div>
+                      <div class="energy-dot">⏳</div>
+                      <div class="energy-dot special">🌌</div>
+                    </div>
+                    <span class="ultimate-badge">GX OMEGA</span>
+                    <span class="attack-name" contenteditable="true" spellcheck="false"
+                      title="點擊編輯大招名稱">時之永眠・因果崩解</span>
+                  </div>
+                  <div class="attack-damage" contenteditable="true" spellcheck="false" title="點擊編輯傷害">280</div>
+                </div>
+                <div class="attack-desc" contenteditable="true" spellcheck="false" title="點擊編輯大招說明">
+                  放逐目標至時間裂縫，直接跳過對手下一個回合。
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Card Footer: Combat Rules & Authentication Stamp -->
+            <div class="card-footer">
+              <div class="battle-stats-row">
+                <div class="battle-stat-item">弱點 <strong contenteditable="true" spellcheck="false">🌀 ×2</strong></div>
+                <div class="battle-stat-item">抗性 <strong contenteditable="true" spellcheck="false">⏳ -30</strong></div>
+                <div class="battle-stat-item">調度 <strong contenteditable="true" spellcheck="false">⏳</strong></div>
+              </div>
+              <div class="meta-seal-row">
+                <div class="meta-left">
+                  <span class="meta-collector" contenteditable="true" spellcheck="false">Illus. Atelier Chronos | No.
+                    000/001 ★★★ EX</span>
+                  <span class="meta-copyright" contenteditable="true" spellcheck="false">© 2026 CHRONOS PARADOX
+                    ARCHIVE</span>
+                </div>
+                <div class="holo-security-seal" title="反光防偽認證印記">✦</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- BACK FACE (Flip Side) -->
+          <div class="card-face card-back" id="cardBackFace">
+            <div class="back-ring-outer"></div>
+            <div class="back-ring-middle"></div>
+            <div class="back-seal-center">
+              <div class="back-emblem">⏳</div>
+              <div class="back-title">CHRONOS</div>
+              <div class="back-sub">PARADOX ARCHIVE</div>
+            </div>
+            <div class="card-foil-layer foil-rainbow-secret" style="opacity: 0.4;"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Frosted Glass Control Panel (Right Column) -->
+    <aside class="control-panel">
+
+      <div class="panel-header">
+        <h2>⚡ 鑄造與控制面板</h2>
+        <p>即時切換動態箔膜折射風格、翻轉卡牌或更換肖像插畫。</p>
+      </div>
+
+      <!-- Edit Tip Notice -->
+      <div class="edit-hint-badge">
+        <span>✏️</span>
+        <div>卡面文字皆已開啟 <strong>即時編輯</strong>（contenteditable），直接點擊卡牌文字即可隨意修改名稱、HP、招式與數值！</div>
+      </div>
+
+      <!-- Holographic Foil Style Switcher -->
+      <div class="panel-section">
+        <label class="section-label">✨ 鐳射箔膜風格（Foil Style）</label>
+        <div class="foil-style-grid">
+          <button class="foil-btn active" data-style="foil-rainbow-secret">
+            <span class="foil-color-dot" style="background: linear-gradient(135deg, #f43f5e, #3b82f6, #10b981);"></span>
+            Rainbow Secret<br><small style="color:#94a3b8">極光全息</small>
+          </button>
+          <button class="foil-btn" data-style="foil-cosmos-holo">
+            <span class="foil-color-dot" style="background: radial-gradient(circle, #38bdf8, #c084fc);"></span>
+            Cosmos Holo<br><small style="color:#94a3b8">宇宙彩虹</small>
+          </button>
+          <button class="foil-btn" data-style="foil-gold-ultra">
+            <span class="foil-color-dot" style="background: linear-gradient(135deg, #fbbf24, #b45309);"></span>
+            Gold Ultra<br><small style="color:#94a3b8">黑金浮雕</small>
+          </button>
+          <button class="foil-btn" data-style="foil-silver-phantom">
+            <span class="foil-color-dot" style="background: linear-gradient(135deg, #e2e8f0, #38bdf8);"></span>
+            Silver Phantom<br><small style="color:#94a3b8">冷冽銀鏡</small>
+          </button>
+        </div>
+      </div>
+
+      <!-- Upload Custom Portrait -->
+      <div class="panel-section">
+        <label class="section-label">🖼️ 更換卡牌立繪（Local Image Upload）</label>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="imageInput" accept="image/*">
+          <div class="upload-prompt">
+            <span>📁 拖放或點擊此處上傳自訂圖片 (PNG/JPG)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Interactive Action                                                                  Buttons -->
+      <div class="panel-section">
+        <label class="section-label">🎮 3D 視差與視角操控</label>
+        <div class="btn-row">
+          <button class="btn-action" id="btnFlipCard">
+            <span>🔄</span> 翻轉卡背 (180°)
+          </button>
+          <button class="btn-action" id="btnToggleMotion">
+            <span id="motionIcon">⏸️</span> <span id="motionText">暫停動態浮動</span>
+          </button>
+        </div>
+        <div class="btn-row" style="margin-top: 0.4rem;">
+          <button class="btn-action" id="btnEnableGyro" style="grid-column: span 2;">
+            <span>📱</span> 開啟手機陀螺儀感應 (Gyroscope)
+          </button>
+        </div>
+      </div>
+
+      <!-- Foil Intensity Sliders -->
+      <div class="panel-section">
+        <div class="slider-row">
+          <div class="slider-info">
+            <span>全息折射強度 (Foil Opacity)</span>
+            <span id="foilVal">85%</span>
+          </div>
+          <input type="range" id="foilSlider" min="20" max="100" value="85">
+        </div>
+      </div>
+
+      <!-- Export HD PNG Button -->
+      <div class="panel-section" style="margin-top: 0.5rem;">
+        <button class="btn-primary-export" id="btnExportCard">
+          <span>📸</span> 一鍵匯出高解析度 PNG 卡牌
+        </button>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Toast Notification -->
+  <div class="toast-msg" id="toastMsg">高解析度卡牌已成功匯出！</div>
+
+  <!-- Interactive JavaScript Logic -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const cardStage = document.getElementById('cardStage');
+      const cardWrapper = document.getElementById('cardWrapper');
+      const foilLayer = document.getElementById('foilLayer');
+      const glareLayer = document.getElementById('glareLayer');
+      const foilButtons = document.querySelectorAll('.foil-btn');
+      const btnFlip = document.getElementById('btnFlipCard');
+      const btnToggleMotion = document.getElementById('btnToggleMotion');
+      const motionIcon = document.getElementById('motionIcon');
+      const motionText = document.getElementById('motionText');
+      const btnEnableGyro = document.getElementById('btnEnableGyro');
+      const imageInput = document.getElementById('imageInput');
+      const cardArtImage = document.getElementById('cardArtImage');
+      const foilSlider = document.getElementById('foilSlider');
+      const foilVal = document.getElementById('foilVal');
+      const btnExport = document.getElementById('btnExportCard');
+      const toastMsg = document.getElementById('toastMsg');
+
+      let isHovered = false;
+      let isFlipped = false;
+      let isAutoIdle = true;
+      let gyroEnabled = false;
+      const MAX_TILT = 22; // Maximum tilt angle in degrees
+
+      // -------------------------------------------------------------
+      // 1. 3D Tilt & Foil Reflection Math (Mouse & Touch)
+      // -------------------------------------------------------------
+      function handleMove(clientX, clientY) {
+        if (isFlipped) return; // disable foil angle when looking at back face
+
+        const rect = cardWrapper.getBoundingClientRect();
+        const x = clientY - rect.top; // offset from top
+        const y = clientX - rect.left; // offset from left
+
+        // Normalized coordinate (-1 to +1)
+        const normX = (clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
+        const normY = (clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
+
+        // Clamped tilt rotation
+        const clampedNormX = Math.max(-1, Math.min(1, normX));
+        const clampedNormY = Math.max(-1, Math.min(1, normY));
+
+        const rotX = -clampedNormY * MAX_TILT;
+        const rotY = clampedNormX * MAX_TILT;
+
+        // Pointer percentage for gradients
+        const pointerX = Math.round(((clientX - rect.left) / rect.width) * 100);
+        const pointerY = Math.round(((clientY - rect.top) / rect.height) * 100);
+
+        // Apply dynamic CSS variables
+        cardWrapper.classList.remove('smooth-return', 'auto-idle');
+        cardWrapper.style.transform = `rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+
+        cardWrapper.style.setProperty('--pointer-x', `${pointerX}%`);
+        cardWrapper.style.setProperty('--pointer-y', `${pointerY}%`);
+        cardWrapper.style.setProperty('--rotate-x', `${rotX.toFixed(1)}deg`);
+        cardWrapper.style.setProperty('--rotate-y', `${rotY.toFixed(1)}deg`);
+      }
+
+      // Mouse Events
+      cardStage.addEventListener('mouseenter', () => {
+        isHovered = true;
+        cardWrapper.classList.remove('auto-idle');
+      });
+
+      cardStage.addEventListener('mousemove', (e) => {
+        handleMove(e.clientX, e.clientY);
+      });
+
+      cardStage.addEventListener('mouseleave', () => {
+        isHovered = false;
+        if (!isFlipped) {
+          cardWrapper.classList.add('smooth-return');
+          cardWrapper.style.transform = `rotateX(0deg) rotateY(0deg)`;
+          if (isAutoIdle) {
+            setTimeout(() => {
+              if (!isHovered && isAutoIdle && !isFlipped) {
+                cardWrapper.classList.add('auto-idle');
+              }
+            }, 600);
+          }
+        }
+      });
+
+      // Touch Events (Mobile)
+      cardStage.addEventListener('touchstart', (e) => {
+        isHovered = true;
+        cardWrapper.classList.remove('auto-idle');
+        if (e.touches.length > 0) {
+          handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      cardStage.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+          handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      cardStage.addEventListener('touchend', () => {
+        isHovered = false;
+        if (!isFlipped) {
+          cardWrapper.classList.add('smooth-return');
+          cardWrapper.style.transform = `rotateX(0deg) rotateY(0deg)`;
+          if (isAutoIdle) {
+            setTimeout(() => {
+              if (!isHovered && isAutoIdle && !isFlipped) {
+                cardWrapper.classList.add('auto-idle');
+              }
+            }, 600);
+          }
+        }
+      });
+
+      // -------------------------------------------------------------
+      // 2. Gyroscope Sensor (DeviceOrientationEvent)
+      // -------------------------------------------------------------
+      function handleOrientation(e) {
+        if (!gyroEnabled || isHovered || isFlipped) return;
+
+        // gamma: left-right (-90 to 90)
+        // beta: front-back (-180 to 180)
+        const gamma = e.gamma || 0; // tilt left/right
+        const beta = e.beta || 0;   // tilt front/back
+
+        const tiltX = Math.max(-MAX_TILT, Math.min(MAX_TILT, (beta - 40) * 0.8));
+        const tiltY = Math.max(-MAX_TILT, Math.min(MAX_TILT, gamma * 0.8));
+
+        cardWrapper.classList.remove('auto-idle', 'smooth-return');
+        cardWrapper.style.transform = `rotateX(${-tiltX}deg) rotateY(${tiltY}deg)`;
+
+        const normX = (tiltY / MAX_TILT) * 50 + 50;
+        const normY = (tiltX / MAX_TILT) * 50 + 50;
+
+        cardWrapper.style.setProperty('--pointer-x', `${normX}%`);
+        cardWrapper.style.setProperty('--pointer-y', `${normY}%`);
+        cardWrapper.style.setProperty('--rotate-x', `${-tiltX}deg`);
+        cardWrapper.style.setProperty('--rotate-y', `${tiltY}deg`);
+      }
+
+      btnEnableGyro.addEventListener('click', async () => {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          try {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation);
+              gyroEnabled = true;
+              showToast('陀螺儀感應已啟動！請傾斜手機觀察反光');
+              btnEnableGyro.style.borderColor = '#10b981';
+              btnEnableGyro.innerHTML = '<span>✅</span> 陀螺儀感應運作中';
+            } else {
+              showToast('陀螺儀權限被拒絕');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('無法請求陀螺儀權限');
+          }
+        } else if ('DeviceOrientationEvent' in window) {
+          window.addEventListener('deviceorientation', handleOrientation);
+          gyroEnabled = true;
+          showToast('陀螺儀感應已啟動！請傾斜設備');
+          btnEnableGyro.style.borderColor = '#10b981';
+          btnEnableGyro.innerHTML = '<span>✅</span> 陀螺儀感應運作中';
+        } else {
+          showToast('此裝置或瀏覽器不支援陀螺儀感應');
+        }
+      });
+
+      // -------------------------------------------------------------
+      // 3. Foil Style Switching
+      // -------------------------------------------------------------
+      foilButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          foilButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const newStyle = btn.getAttribute('data-style');
+          // Remove old styles
+          foilLayer.className = 'card-foil-layer ' + newStyle;
+          showToast(`已切換全息風格：${btn.innerText.split('\n')[0]}`);
+        });
+      });
+
+      // -------------------------------------------------------------
+      // 4. Flip Card Toggle (180deg)
+      // -------------------------------------------------------------
+      btnFlip.addEventListener('click', () => {
+        isFlipped = !isFlipped;
+        cardWrapper.classList.remove('auto-idle');
+        if (isFlipped) {
+          cardWrapper.classList.add('flipped');
+          btnFlip.innerHTML = '<span>🔄</span> 翻回卡面 (Front)';
+        } else {
+          cardWrapper.classList.remove('flipped');
+          btnFlip.innerHTML = '<span>🔄</span> 翻轉卡背 (180°)';
+          if (isAutoIdle) {
+            setTimeout(() => cardWrapper.classList.add('auto-idle'), 600);
+          }
+        }
+      });
+
+      // -------------------------------------------------------------
+      // 5. Idle Floating Toggle
+      // -------------------------------------------------------------
+      btnToggleMotion.addEventListener('click', () => {
+        isAutoIdle = !isAutoIdle;
+        if (isAutoIdle) {
+          cardWrapper.classList.add('auto-idle');
+          motionIcon.textContent = '⏸️';
+          motionText.textContent = '暫停動態浮動';
+        } else {
+          cardWrapper.classList.remove('auto-idle');
+          cardWrapper.style.transform = `rotateX(0deg) rotateY(0deg)`;
+          motionIcon.textContent = '▶️';
+          motionText.textContent = '恢復動態浮動';
+        }
+      });
+
+      // -------------------------------------------------------------
+      // 6. Local Image Upload (FileReader API)
+      // -------------------------------------------------------------
+      imageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          if (!file.type.startsWith('image/')) {
+            showToast('請選擇有效的圖片檔案！');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            cardArtImage.src = event.target.result;
+            showToast('立繪插畫已更新！');
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // -------------------------------------------------------------
+      // 7. Foil Opacity Slider
+      // -------------------------------------------------------------
+      foilSlider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        foilVal.textContent = `${val}%`;
+        cardWrapper.style.setProperty('--foil-opacity', (val / 100).toString());
+      });
+
+      // -------------------------------------------------------------
+      // 8. HD PNG Export via html2canvas
+      // -------------------------------------------------------------
+      btnExport.addEventListener('click', async () => {
+        showToast('正在生成超高解析度卡牌...');
+
+        const target = document.getElementById('cardExportTarget');
+
+        // Temporarily prepare card for clean render
+        const originalTransform = cardWrapper.style.transform;
+        cardWrapper.classList.remove('auto-idle', 'smooth-return', 'flipped');
+        cardWrapper.style.transform = 'none';
+
+        // Wait a tick for styles to settle
+        await new Promise(r => setTimeout(r, 100));
+
+        try {
+          const canvas = await html2canvas(target, {
+            scale: 3, // 3x scale for crisp print quality
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null,
+            logging: false
+          });
+
+          // Create download link
+          const link = document.createElement('a');
+          const cardName = document.getElementById('cardNameText').innerText.trim() || 'Custom_TCG_Card';
+          link.download = `${cardName}_Holo_Card.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+
+          showToast('🎉 卡牌高解析度 PNG 匯出成功！');
+        } catch (error) {
+          console.error('Export error:', error);
+          showToast('匯出失敗，請重試');
+        } finally {
+          // Restore original state
+          cardWrapper.style.transform = originalTransform;
+          if (isFlipped) cardWrapper.classList.add('flipped');
+          if (isAutoIdle && !isFlipped) cardWrapper.classList.add('auto-idle');
+        }
+      });
+
+      // -------------------------------------------------------------
+      // 9. Toast Notification Helper
+      // -------------------------------------------------------------
+      let toastTimeout;
+      function showToast(msg) {
+        toastMsg.textContent = msg;
+        toastMsg.classList.add('show');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toastMsg.classList.remove('show');
+        }, 3000);
+      }
+
+    });
+  </script>
+</body>
+
+</html>
